@@ -1,8 +1,9 @@
 ---
 title: "FPCC2 - Laboratório 1"
 author: "<<aluno>>"
-date: "3/11/2020"
-output: html_document
+output:
+  md_document:
+    variant: gfm
 ---
 
 ```{r setup, include=FALSE}
