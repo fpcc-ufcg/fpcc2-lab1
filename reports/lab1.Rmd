@@ -1,8 +1,8 @@
 ---
 title: "FPCC2 - Laboratório 1"
-#output:
-#  md_document:
-#    variant: markdown_github
+output:
+  md_document:
+    variant: markdown_github
 ---
 
 ```{r setup, include=FALSE}
@@ -83,7 +83,7 @@ p_q3
 ggsave("../data/plot_q3.png", width = 5, height = 5)
 ```
 
-# Percentual de alunos para cada estado de origem
+# Q4: Percentual de alunos para cada estado de origem
 
 * Manipulação semelhante a mostrada em sala
 
