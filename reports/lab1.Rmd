@@ -1,9 +1,8 @@
 ---
 title: "FPCC2 - Laboratório 1"
-author: "<<aluno>>"
-output:
-  md_document:
-    variant: markdown_github
+#output:
+#  md_document:
+#    variant: markdown_github
 ---
 
 ```{r setup, include=FALSE}
@@ -11,62 +10,85 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 # Importando dados
-```{r, echo = FALSE}
+```{r, echo = FALSE, message=FALSE, warning=FALSE}
 library(ggplot2)
 library(scales)
 
 source("../code/lab1.R")
 ```
 
-# Qual a quantidade e percentual de alunos em cada tipo de curso (mestrado ou doutorado)?
+# Q1: Média e desvio padrão da idade e nível de interesse
+
+* Considerando o nível de interesse como sendo o quão confiante os alunos estão para programar em R 
 
 ```{r}
+df_q1 <- turma_fpcc2 %>% 
+  select(prog_r, idade) %>% 
+  mutate(idade_int = as.integer(gsub("[a-z]|\\.", "", idade))) %>% 
+  group_by(prog_r) %>% 
+  summarise(media = mean(idade_int),
+            desvio = sd(idade_int))
+      
+df_q1   
+```
 
-q1 <- turma_fpcc2 %>% select(tipo_curso, matricula) %>% 
+* Apresentando de forma ordenada, da maior idade para a menor
+
+```{r}
+df_q1 %>% arrange(-media)
+```
+
+* Salvando resultados em um csv
+
+```{r}
+write_csv(df_q1, file = "../data/q1_data.csv")
+```
+
+* **Observação:** Como discutido em aula, uma interpretação possível seria converter os valores categóricos do interesse para valores ordinais, que permitem ranking, mas não seria possível calcular médias desses valores. Todavia, essas opções não serão penalizadas na correção. 
+
+# Q2: Curso com maior valor médio de idade
+
+* É preciso manipular novamente as idades se isso não foi realizado e salvo anteriormente
+
+```{r}
+df_q2 <- turma_fpcc2 %>% 
+  select(tipo_curso, idade) %>% 
+  mutate(idade_int = as.integer(gsub("[a-z]|\\.", "", idade))) %>% 
   group_by(tipo_curso) %>% 
-  summarise(num = n()) %>% 
-  mutate(perc = paste(num / nrow(turma_fpcc2) * 100, "%", sep = ""),
-         perc2 = num / nrow(turma_fpcc2))
-
-ggplot(q1, aes(tipo_curso, num, fill = tipo_curso)) + 
-  geom_bar(stat = "identity") + 
-  xlab("Tipo de curso") +
-  ylab("Número de alunos") + 
-  theme_bw(base_size = 14) + 
-  theme(legend.position = "None")
-
-ggplot(q1, aes(tipo_curso, perc2, fill = tipo_curso)) + 
-  geom_bar(stat = "identity") + 
-  xlab("Tipo de curso") +
-  ylab("Alunos") + 
-  theme_bw(base_size = 14) + 
-  scale_y_continuous(labels = percent) + 
-  theme(legend.position = "None")
+  summarise(media = mean(idade_int))
+      
+curso_q2 <- df_q2 %>% filter(media == max(media)) %>% pull(tipo_curso)
 ```
+O curso com maior média de idade é `r curso_q2`.
 
-# Qual a faixa etária (média, desvio padrão, mínimo, máximo)? Boxplot dos dados da idade (mediana)
+# Q3: Gráfico que mostra a idade média para cada curso
 
-```{r, echo=TRUE}
-df_idade <- turma_fpcc2 %>% select(idade) %>% 
-  mutate(idade_int = as.integer(gsub("[a-z]|\\.", "", idade)))
+* Usando o datframe usado para a questão 2
 
-mean(df_idade$idade_int)
-min(df_idade$idade_int)
-max(df_idade$idade_int)
-median(df_idade$idade_int)
-sd(df_idade$idade_int)
+```{r, fig.align='center'}
+p_q3 <- ggplot(df_q2, aes(tipo_curso, media, fill = tipo_curso)) + 
+  geom_bar(stat = "identity") + 
+  geom_text(aes(label = paste(round(media, digits = 2), "anos"), vjust = -1)) + 
+  labs(x = "Tipo do curso", y= "Média idade") + 
+  theme_bw(base_size = 14) + 
+  theme(legend.position = "None") + 
+  scale_y_continuous(limits = c(0, 40))
 
-summary(df_idade$idade_int)
-boxplot(df_idade$idade_int)
+p_q3
 ```
+* Salvando o plot anterior em um arquivo
 
-# Qual a quantidade de alunos por estado?
 
 ```{r}
-turma_fpcc2 %>% select(uf) %>% 
-  filter(uf != "Opção 1")
+ggsave("../data/plot_q3.png", width = 5, height = 5)
+```
 
-turma_fpcc2 %>% select(uf) %>% 
+# Percentual de alunos para cada estado de origem
+
+* Manipulação semelhante a mostrada em sala
+
+```{r, fig.align='center'}
+df_q4 <- turma_fpcc2 %>% select(uf) %>% 
   mutate(uf = ifelse(uf == "Opção 1", NA, uf)) %>% 
   mutate(uf = case_when(
     uf == "Paraiba" ~ "PB", 
@@ -79,18 +101,59 @@ turma_fpcc2 %>% select(uf) %>%
   )) %>% 
   filter(!is.na(uf)) %>%
   count(uf) %>% 
-  arrange(-n, uf)
+  arrange(-n, uf) %>%
+  mutate(percentual = n / sum(n)) %>%
+  select(-n) %>% 
+  arrange(percentual) %>% 
+  mutate(uf=factor(uf, levels=uf))
 
 
-ufs <- c("PB", "PB", "PB", "PB", "AC", "AL", "PE")
-names <- c("PB", "Paraiba", "Paraíba", "PB (Campina Grande)", "Acre", "Alagoas", 
-           "Pernambuco, mas moro em Campina Grande há mais de 20 anos")
+ggplot(df_q4, aes(uf, percentual)) +  
+  geom_bar(stat = "identity") + 
+  geom_text(aes(label = paste(round(percentual*100, digits = 2), "%"), hjust = -0.3)) + 
+  labs(x = "Estado de origem", y= "Ocorrência de alunos") + 
+  theme_bw(base_size = 14) + 
+  scale_y_continuous(limits = c(0, 1), labels = percent) + 
+  coord_flip()
+```
 
-df_uf <- data.frame(uf = names, ufs)
-turma_fpcc2 %>% select(uf) %>% 
-  full_join(df_uf)
+* Salvando o plot anterior em um arquivo
+
+
+```{r}
+ggsave("../data/plot_q4.png", width = 5, height = 4)
 ```
 
 
+# Q5: Média de idade geral comparada com a média de idade dos top-5 e dos bottom-5
 
+* Gerando dataframe base com os valores para comparação
+
+```{r}
+df_q5 <- turma_fpcc2 %>% 
+  select(tipo_curso, idade) %>% 
+  mutate(idade_int = as.integer(gsub("[a-z]|\\.", "", idade))) %>% 
+  select(idade = idade_int) %>%
+  arrange(-idade) %>% 
+  summarise(geral = mean(idade),
+            top_5 = mean(head(idade, 5)),
+            bottom_5 = mean(tail(idade, 5)))
+
+df_q5  
+```
+
+* Manipulando dataframe para facilitar comparação e visualização
+
+```{r}
+library(tidyr)
+df_q5b <- df_q5 %>% gather("metric", "value", 1:3) 
+df_q5b
+```
+
+```{r, fig.align='center'}
+ggplot(df_q5b, aes(metric, value)) + 
+  geom_bar(stat = "identity") + 
+  labs(x = "Cenários", y= "Idade média") + 
+  theme_bw(base_size = 14)
+```
 

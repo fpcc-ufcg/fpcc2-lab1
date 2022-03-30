@@ -20,7 +20,7 @@ colnames <- c("tipo_curso", "matricula", "conf_sumarios", "conf_histo",
 colnames(turma_fpcc2) <- colnames
 
 # visão geral dados renomeados
-glimpse(turma_fpcc2)
+# glimpse(turma_fpcc2)
 
 
 
